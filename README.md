@@ -36,7 +36,7 @@ The same three commands work from the repository root on any machine with Python
 
 ## Dashboard
 
-**Live dashboard:** PASTE_STREAMLIT_URL_HERE
+**Live dashboard:** [immune-cell-analysis-teiko.streamlit.app](https://immune-cell-analysis-teiko.streamlit.app/)
 
 To run it yourself, use `make dashboard` as described above.
 
