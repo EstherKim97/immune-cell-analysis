@@ -15,4 +15,4 @@ pipeline:
 	$(PYTHON) subset_analysis.py
 
 dashboard:
-	$(PYTHON) -m streamlit run app.py
+	$(PYTHON) -m streamlit run app.py --server.headless true --server.port 8501
