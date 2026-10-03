@@ -1,7 +1,7 @@
 """Part 3: compare immune-cell frequencies by miraclib response.
 
-The pooled sample comparison answers the assessment question. Subject means and
-baseline samples provide independent-subject sensitivity checks.
+The primary comparison pools all PBMC samples. Subject means, Day 0 samples, and
+Day 0 to Day 14 changes are sensitivity checks that count each patient once.
 """
 
 import math
@@ -223,7 +223,7 @@ def conclusions(table: pd.DataFrame, label: str) -> list[str]:
         evidence = ("survived FDR correction" if result.fdr_significant else
                     "nominal only; did not survive FDR" if result.nominal_significant else
                     "no nominal evidence")
-        lines.append(f"{label}: {result.population} — {evidence}; {result.direction}; "
+        lines.append(f"{label}, {result.population}: {evidence}; {result.direction}; "
                      f"rank-biserial={result.effect_size:.3f}, "
                      f"p={result.raw_p_value:.4g}, q={result.fdr_q_value:.4g}.")
     return lines
@@ -263,7 +263,7 @@ def main() -> None:
           f"({summary['responder_samples']} responders, {summary['nonresponder_samples']} nonresponders).")
     print(f"Samples per subject: {summary['samples_per_subject']}; timepoints: {summary['timepoints']}")
     print(f"Population observations: {summary['population_observations']}")
-    print("\nRequested pooled sample-level comparison (exploratory; repeated samples are correlated):")
+    print("\nPooled sample-level comparison (each subject contributes repeated, correlated samples):")
     print(analysis["pooled"][['population', 'responder_median', 'nonresponder_median',
                                'effect_size', 'raw_p_value', 'fdr_q_value']].to_string(index=False))
     for label, key in (("Pooled", "pooled"), ("Subject mean", "subject_mean"),
@@ -273,8 +273,7 @@ def main() -> None:
             print("  " + line)
     print("\nPercentages describe relative composition, so changes in one population affect the others. "
           "Subject-level mean and change comparisons give each patient one observation. "
-          "Direction refers to medians; rank-biserial sign refers to pairwise dominance and can differ. "
-          "Day zero is treated as baseline, but the CSV does not confirm pretreatment collection. "
+          "Day 0 is treated as baseline, as defined in the assessment. "
           "Baseline associations alone do not establish predictive utility.")
 
 

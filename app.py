@@ -157,13 +157,13 @@ def overview_page(database_revision: tuple[int, int]) -> None:
     for number, question in (
         ("01", "What fraction of each sample is represented by each immune-cell population?"),
         ("02", "Does immune-cell composition differ between miraclib responders and nonresponders?"),
-        ("03", "What characterizes the requested baseline melanoma/miraclib/PBMC cohort?"),
+        ("03", "What characterizes the baseline melanoma/miraclib/PBMC cohort?"),
     ):
         st.markdown(f'<div class="question-row"><span>{number}</span><p>{question}</p></div>',
                     unsafe_allow_html=True)
     section_title("Key result", "Pooled melanoma · miraclib · PBMC comparison")
     lead = strongest(load_response_analysis(database_revision)["pooled"])
-    st.markdown(f'**Strongest observed difference — {POPULATION_LABELS[lead.population]}**')
+    st.markdown(f'**Strongest observed difference: {POPULATION_LABELS[lead.population]}**')
     st.markdown(evidence_text(lead))
     st.caption(f"Responder median {lead.responder_median:.2f}% · nonresponder median "
                f"{lead.nonresponder_median:.2f}% · raw p = {lead.raw_p_value:.4g} · "
@@ -319,7 +319,7 @@ def response_page(database_revision: tuple[int, int]) -> None:
              ("Nonresponder samples", f"{summary['nonresponder_samples']:,}")])
     section_title("Key finding")
     lead = strongest(analysis["pooled"])
-    st.markdown(f'**Strongest observed difference — {POPULATION_LABELS[lead.population]}**')
+    st.markdown(f'**Strongest observed difference: {POPULATION_LABELS[lead.population]}**')
     metrics([("Responder median", f"{lead.responder_median:.2f}%"),
              ("Nonresponder median", f"{lead.nonresponder_median:.2f}%"),
              ("Rank-biserial", f"{lead.effect_size:.3f}"),
@@ -336,12 +336,29 @@ def response_page(database_revision: tuple[int, int]) -> None:
                "Benjamini–Hochberg FDR adjustment covers the five populations. "
                "Pooled longitudinal samples from one subject are not fully independent.")
     section_title("Robustness check", "Subject-level and timepoint sensitivity analyses")
-    st.markdown("**Why check this?** The primary comparison pools longitudinal samples. "
-                "Subject means give each patient one aggregated observation.")
+    st.markdown("**Why check this?** The primary comparison pools three samples from each patient, "
+                "so the same person is counted three times. These checks count each patient once: "
+                "as a mean across timepoints, as a single Day 0 sample, or as a change from Day 0 to Day 14.")
     subject_lead = strongest(analysis["subject_mean"])
     st.markdown(f"In the subject-mean comparison, **{POPULATION_LABELS[subject_lead.population]}** "
                 f"had the smallest raw p (p = {subject_lead.raw_p_value:.3g}; "
                 f"FDR q = {subject_lead.fdr_q_value:.3g}). {evidence_text(subject_lead)}")
+    change = analysis["subject_change"]
+    significant_change = change.loc[change.fdr_significant]
+    if significant_change.empty:
+        st.markdown("No population's change from Day 0 to Day 14 met the FDR threshold (q < 0.05).")
+    else:
+        for row in significant_change.itertuples():
+            st.markdown(f"**Change from Day 0 to Day 14: {POPULATION_LABELS[row.population]}**")
+            metrics([("Responder median change", f"{row.responder_median:+.2f} pp"),
+                     ("Nonresponder median change", f"{row.nonresponder_median:+.2f} pp"),
+                     ("Raw p", f"{row.raw_p_value:.3g}"),
+                     ("FDR q", f"{row.fdr_q_value:.3g}")])
+            st.markdown(f"{POPULATION_LABELS[row.population]} changed differently in responders and "
+                        "nonresponders during treatment, and this difference passed FDR correction.")
+        st.caption("Treat this as exploratory. FDR correction covers the five populations within each "
+                   "analysis, not all four analyses together, and a change during treatment cannot "
+                   "predict response before treatment starts.")
     with st.expander("Subject-mean results"):
         display_results(analysis["subject_mean"])
     with st.expander("Day 0 results"):
@@ -368,13 +385,26 @@ def distribution_bars(rows: list[dict], label_key: str, count_key: str,
 
 
 def baseline_page(database_revision: tuple[int, int]) -> None:
-    page_header("04", "Cohort Explorer", "Who makes up the requested baseline melanoma cohort?")
+    page_header("04", "Cohort Explorer", "Who makes up the baseline melanoma cohort?")
     result = load_baseline_subset(database_revision)
     cohort = result["cohort"]
     tables = result["tables"]
     st.markdown('<div class="cohort-line">Melanoma · miraclib · PBMC · time = 0</div>', unsafe_allow_html=True)
     metrics([("Qualifying samples", f"{len(cohort):,}"),
              ("Unique subjects", f"{len({row['subject'] for row in cohort}):,}")])
+    section_title("Baseline cohort samples", f"{len(cohort):,} samples")
+    st.markdown("All melanoma PBMC samples at time 0 from patients treated with miraclib.")
+    cohort_table = pd.DataFrame(cohort)[["sample", "subject", "project", "response", "sex"]]
+    st.dataframe(cohort_table, hide_index=True, width="stretch", height=320,
+                 column_config={
+                     "sample": st.column_config.TextColumn("Sample"),
+                     "subject": st.column_config.TextColumn("Subject"),
+                     "project": st.column_config.TextColumn("Project"),
+                     "response": st.column_config.TextColumn("Response"),
+                     "sex": st.column_config.TextColumn("Sex"),
+                 })
+    st.download_button("Download baseline cohort", cohort_table.to_csv(index=False),
+                       file_name="part4_cohort.csv", mime="text/csv")
     section_title("Cohort composition", "Counts and shares at the correct observational level")
     st.markdown("**Samples by project** · unique samples")
     distribution_bars(tables["samples_by_project"], "project", "sample_count", {}, CRIMSON)

@@ -99,7 +99,7 @@ def get_baseline_male_responder_b_cell_average(connection: sqlite3.Connection) -
         """ + BASELINE_MALE_B_CELL_FROM
     ).fetchall()
     if not selected:
-        raise ValueError("No B-cell observations match the requested cohort")
+        raise ValueError("No B-cell observations match the Part 4 filters")
 
     sample_ids = set()
     subject_ids = set()
@@ -108,7 +108,7 @@ def get_baseline_male_responder_b_cell_average(connection: sqlite3.Connection) -
     for (sample, subject, condition, sex, response, timepoint,
          sample_type, treatment, cell_type, count) in selected:
         if (condition, sex, response, timepoint, cell_type) != ("melanoma", "M", "yes", 0, "b_cell"):
-            raise ValueError(f"Sample {sample} does not match the requested filters")
+            raise ValueError(f"Sample {sample} does not match the Part 4 filters")
         if sample in sample_ids:
             raise ValueError(f"Duplicate B-cell observation for sample {sample}")
         if count is None or count < 0:
